@@ -376,6 +376,35 @@ func TestHandleRefresh_EmptyBody(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rr.Code)
 }
 
+func TestServerTimeouts(t *testing.T) {
+	tests := []struct {
+		name      string
+		wantRead  string
+		wantWrite string
+		wantIdle  string
+	}{
+		{
+			name:      "slowloris-mitigation timeouts are configured",
+			wantRead:  "30s",
+			wantWrite: "1m0s",
+			wantIdle:  "2m0s",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := NewServer(nil, 8080)
+			// Start will fail because HOSTNAME is not set in the test
+			// environment, but that happens after httpServer is initialized,
+			// so the configured timeouts can still be inspected.
+			_ = s.Start(t.Context())
+			assert.NotNil(t, s.httpServer)
+			assert.Equal(t, tt.wantRead, s.httpServer.ReadTimeout.String())
+			assert.Equal(t, tt.wantWrite, s.httpServer.WriteTimeout.String())
+			assert.Equal(t, tt.wantIdle, s.httpServer.IdleTimeout.String())
+		})
+	}
+}
+
 func TestServer_Stop_WithNilFields(t *testing.T) {
 	s := &Server{
 		httpServer:  nil,
