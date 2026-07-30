@@ -307,7 +307,7 @@ func (m *SandboxManager) Stop(ctx context.Context) {
 	m.proxy.Stop(ctx)
 	m.infra.Stop(ctx)
 	if m.peersManager != nil {
-		if err := m.peersManager.Stop(); err != nil {
+		if err := m.peersManager.Stop(ctx); err != nil {
 			log.Error(err, "failed to stop peers manager")
 		}
 	}

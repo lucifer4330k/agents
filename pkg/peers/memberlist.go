@@ -199,12 +199,16 @@ func (m *MemberlistPeers) Start(ctx context.Context, bindPort int) error {
 }
 
 // Stop gracefully leaves the cluster and shuts down
-func (m *MemberlistPeers) Stop() error {
+func (m *MemberlistPeers) Stop(ctx context.Context) error {
 	if !m.started.Load() || m.list == nil {
 		return nil
 	}
 
 	close(m.stopCh)
+
+	// Create a context with timeout for the leave operation
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 
 	// Gracefully leave the cluster
 	if err := m.list.Leave(5 * time.Second); err != nil {

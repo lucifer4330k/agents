@@ -34,7 +34,7 @@ type Peers interface {
 	Start(ctx context.Context, bindPort int) error
 
 	// Stop gracefully shuts down the peer discovery
-	Stop() error
+	Stop(ctx context.Context) error
 
 	// GetPeers returns the current list of alive peers (excluding self)
 	GetPeers() []Peer

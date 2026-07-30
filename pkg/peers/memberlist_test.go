@@ -51,7 +51,7 @@ func TestMemberlistPeers_Start_Stop(t *testing.T) {
 	assert.Len(t, members, 1)
 	assert.Equal(t, "test-node-1", members[0].Name)
 
-	err = peer.Stop()
+	err = peer.Stop(ctx)
 	require.NoError(t, err)
 	assert.False(t, peer.started.Load())
 }
@@ -70,15 +70,16 @@ func TestMemberlistPeers_Start_Twice(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "already started")
 
-	_ = peer.Stop()
+	_ = peer.Stop(ctx)
 }
 
 // TestMemberlistPeers_Stop_NotStarted tests that stopping when not started does not return an error
 func TestMemberlistPeers_Stop_NotStarted(t *testing.T) {
+	ctx := t.Context()
 	fc := fake.NewClientBuilder().WithStatusSubresource(&v1.Pod{}).Build()
 	peer := NewMemberlistPeers(fc, "test-node-not-started", Namespace, LabelSelector)
 
-	err := peer.Stop()
+	err := peer.Stop(ctx)
 	assert.NoError(t, err)
 }
 
@@ -98,17 +99,17 @@ func TestMemberlistPeers_ThreeNodes_Join(t *testing.T) {
 	// Start first node (seed node)
 	err = peer1.Start(ctx, port1)
 	require.NoError(t, err)
-	defer func() { _ = peer1.Stop() }()
+	defer func() { _ = peer1.Stop(ctx) }()
 
 	// Start second node, join first
 	err = peer2.Start(ctx, port2)
 	require.NoError(t, err)
-	defer func() { _ = peer2.Stop() }()
+	defer func() { _ = peer2.Stop(ctx) }()
 
 	// Start third node, join first two
 	err = peer3.Start(ctx, port3)
 	require.NoError(t, err)
-	defer func() { _ = peer3.Stop() }()
+	defer func() { _ = peer3.Stop(ctx) }()
 
 	// Wait for gossip propagation
 	assert.Eventually(t, func() bool {
@@ -150,14 +151,14 @@ func TestMemberlistPeers_WaitForPeers(t *testing.T) {
 	// Start first node
 	err = peer1.Start(ctx, port1)
 	require.NoError(t, err)
-	defer func() { _ = peer1.Stop() }()
+	defer func() { _ = peer1.Stop(ctx) }()
 
 	// Start second node asynchronously (delay 200ms)
 	go func() {
 		time.Sleep(200 * time.Millisecond)
 		_ = peer2.Start(ctx, port2)
 	}()
-	defer func() { _ = peer2.Stop() }()
+	defer func() { _ = peer2.Stop(ctx) }()
 
 	// Wait for at least 1 peer
 	waitCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -179,7 +180,7 @@ func TestMemberlistPeers_WaitForPeers_Timeout(t *testing.T) {
 
 	err = peer.Start(ctx, port)
 	require.NoError(t, err)
-	defer func() { _ = peer.Stop() }()
+	defer func() { _ = peer.Stop(ctx) }()
 
 	// Set very short timeout
 	waitCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
@@ -204,7 +205,7 @@ func TestMemberlistPeers_WaitForPeers_Stopped(t *testing.T) {
 	// Stop asynchronously
 	go func() {
 		time.Sleep(100 * time.Millisecond)
-		_ = peer.Stop()
+		_ = peer.Stop(ctx)
 	}()
 
 	// Wait should return stopped error
@@ -226,7 +227,7 @@ func TestMemberlistPeers_NodeLeave(t *testing.T) {
 	// Start two nodes
 	err = peer1.Start(ctx, port1)
 	require.NoError(t, err)
-	defer func() { _ = peer1.Stop() }()
+	defer func() { _ = peer1.Stop(ctx) }()
 
 	err = peer2.Start(ctx, port2)
 	require.NoError(t, err)
@@ -237,7 +238,7 @@ func TestMemberlistPeers_NodeLeave(t *testing.T) {
 	}, 5*time.Second, 100*time.Millisecond)
 
 	// Gracefully stop peer2
-	err = peer2.Stop()
+	err = peer2.Stop(ctx)
 	require.NoError(t, err)
 
 	// Wait for peer2 to be removed from peer1's list
@@ -267,7 +268,7 @@ func TestMemberlistPeers_Join_PartialFailure(t *testing.T) {
 	// Try to join a non-existent node and seed node
 	err = peer.Start(ctx, port)
 	require.NoError(t, err) // Should not fail because single node operation is allowed
-	defer func() { _ = peer.Stop() }()
+	defer func() { _ = peer.Stop(ctx) }()
 
 	assert.True(t, peer.started.Load())
 }
